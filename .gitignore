@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Added by projectcode.dev
+.env
+.env.local
+.env.*.local
+environments
+build
+.next
+.vite
