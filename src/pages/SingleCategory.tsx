@@ -1,12 +1,11 @@
 import { FC, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAppDispatch } from "../redux/hooks";
 import { Product } from "../models/Product";
-import { useAppSelector } from "../redux/hooks";
+import { useAppDispatch, useAppSelector } from "../redux/hooks";
 import { updateLoading } from "../redux/features/homeSlice";
-import SortProducts from "../components/SortProducts"
+import SortProducts from "../components/SortProducts";
 import PaginatedProducts from "../components/PaginatedProducts";
-import { API_ENDPOINTS } from "../api";
+import { categoriesApi } from "../api";
 
 const SingleCategory: FC = () => {
   const dispatch = useAppDispatch();
@@ -16,15 +15,29 @@ const SingleCategory: FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchProducts = () => {
+    const fetchProducts = async () => {
+      if (!slug) return;
       dispatch(updateLoading(true));
-      fetch(`${API_ENDPOINTS.PRODUCTS_CATEGORY_ID.replace(":id", slug || "")}`)
-        .then((res) => res.json())
-        .then((data) => {
-          const { products } = data;
-          setProductList(products);
-          dispatch(updateLoading(false));
-        });
+      try {
+        const result = await categoriesApi.bySlug(slug, { limit: 500 });
+        const products: Product[] = (result.data?.products ?? []).map(
+          (p) => ({
+            id: parseInt(p.id, 10),
+            title: p.title,
+            price: p.price ?? 0,
+            rating: p.rating ?? 0,
+            thumbnail: p.thumbnail ?? undefined,
+            category: p.category,
+            discountPercentage: p.discountPercentage ?? undefined,
+          })
+        );
+        setProductList(products);
+      } catch (err) {
+        console.error("SingleCategory: failed to load", err);
+        setProductList([]);
+      } finally {
+        dispatch(updateLoading(false));
+      }
     };
 
     fetchProducts();
@@ -40,15 +53,6 @@ const SingleCategory: FC = () => {
         </div>
         <SortProducts products={productList} onChange={setProductList} />
       </div>
-      {/* {isLoading ? (
-        <div className="flex items-center justify-center">
-          <div className="animate-spin mt-32 rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
-        </div>
-      ) : (<div className="grid gap-4 xl:grid-cols-4 lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1 my-2">
-        {productList?.map((product) => (
-          <ProductCard key={product.id} {...product} />
-        ))}
-      </div>)} */}
       <PaginatedProducts products={productList} isLoading={isLoading} initialRows={5} />
     </div>
   );

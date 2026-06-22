@@ -3,7 +3,7 @@ import { useAppDispatch, useAppSelector } from "../redux/hooks";
 import { addCategories } from "../redux/features/productSlice";
 import { Link } from "react-router-dom";
 import { updateLoading } from "../redux/features/homeSlice";
-import { API_ENDPOINTS } from "../api";
+import { categoriesApi } from "../api";
 
 const AllCategories: FC = () => {
   const dispatch = useAppDispatch();
@@ -14,14 +14,17 @@ const AllCategories: FC = () => {
   const isLoading = useAppSelector((state) => state.homeReducer.isLoading);
 
   useEffect(() => {
-    const fetchCategories = () => {
+    const fetchCategories = async () => {
       dispatch(updateLoading(true));
-      fetch(`${API_ENDPOINTS.PRODUCTS_CATEGORIES}`)
-        .then((res) => res.json())
-        .then((data) => {
-          dispatch(addCategories(data));
-          dispatch(updateLoading(false));
-        });
+      try {
+        const result = await categoriesApi.list({ limit: 500 });
+        const data = Array.isArray(result.data) ? result.data : [];
+        dispatch(addCategories(data));
+      } catch (err) {
+        console.error("AllCategories: failed to load categories", err);
+      } finally {
+        dispatch(updateLoading(false));
+      }
     };
     if (allCategories.length === 0) fetchCategories();
   }, [allCategories, dispatch]);

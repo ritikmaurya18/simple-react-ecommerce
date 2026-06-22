@@ -3,9 +3,9 @@ import { useAppSelector, useAppDispatch } from "../redux/hooks";
 import { addProducts } from "../redux/features/productSlice";
 import { Product } from "../models/Product";
 import { updateLoading } from "../redux/features/homeSlice";
-import SortProducts from "../components/SortProducts"
+import SortProducts from "../components/SortProducts";
 import PaginatedProducts from "../components/PaginatedProducts";
-import { API_ENDPOINTS } from "../api";
+import { productsApi } from "../api";
 
 const AllProducts: FC = () => {
   const dispatch = useAppDispatch();
@@ -16,14 +16,31 @@ const AllProducts: FC = () => {
   const isLoading = useAppSelector((state) => state.homeReducer.isLoading);
 
   useEffect(() => {
-    const fetchProducts = () => {
+    const fetchProducts = async () => {
       dispatch(updateLoading(true));
-      fetch(`${API_ENDPOINTS.PRODUCTS}?limit=500`)
-        .then((res) => res.json())
-        .then(({ products }) => {
-          dispatch(addProducts(products));
-          dispatch(updateLoading(false));
-        });
+      try {
+        const result = await productsApi.list({ limit: 500 });
+        const products: Product[] = Array.isArray(result.data)
+          ? result.data.map((p) => ({
+              id: parseInt(p.id, 10),
+              title: p.title,
+              price: p.price,
+              rating: p.rating,
+              thumbnail: p.thumbnail,
+              images: p.images,
+              category: p.category,
+              brand: p.brand,
+              stock: p.stock,
+              discountPercentage: p.discountPercentage,
+              description: p.description,
+            }))
+          : [];
+        dispatch(addProducts(products));
+      } catch (err) {
+        console.error("AllProducts: failed to load products", err);
+      } finally {
+        dispatch(updateLoading(false));
+      }
     };
 
     if (allProducts.length === 0) fetchProducts();
